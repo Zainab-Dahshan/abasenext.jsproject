@@ -1,13 +1,15 @@
-import { createServerClient } from '@/lib/supabase'
+// lib/auth.ts
+import { createServerClient } from "@/supabase-server"
 import { prisma } from '@/lib/db'
+
 export async function getAuthenticatedUser() {
   try {
-    const supabase = await createServerClient() // Add await here
+    const supabase = await createServerClient()
     
     const {
       data: { user: supabaseUser },
       error: authError,
-    } = await supabase.auth.getUser() // Remove the extra function call
+    } = await supabase.auth.getUser()
 
     if (authError || !supabaseUser) {
       return null
