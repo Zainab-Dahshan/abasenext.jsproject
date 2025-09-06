@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { requireAuth } from '@/lib/auth'
 
 // GET /api/polls - Fetch all polls
 export async function GET() {
@@ -53,10 +54,13 @@ export async function GET() {
 // POST /api/polls - Create a new poll
 export async function POST(request: NextRequest) {
   try {
-    const { title, description, options, userId } = await request.json()
+    // Require authentication
+    const user = await requireAuth()
+    
+    const { title, description, options } = await request.json()
 
     // Validate input
-    if (!title || !options || options.length < 2 || !userId) {
+    if (!title || !options || options.length < 2) {
       return NextResponse.json(
         { error: 'Invalid poll data' },
         { status: 400 }
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description,
-        createdBy: userId,
+        createdBy: user.id,
         options: {
           create: options.map((option: string) => ({
             text: option,
@@ -104,6 +108,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(transformedPoll, { status: 201 })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
     console.error('Error creating poll:', error)
     return NextResponse.json(
       { error: 'Failed to create poll' },

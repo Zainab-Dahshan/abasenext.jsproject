@@ -12,14 +12,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id // This will store the Supabase UUID
   email     String   @unique
   name      String
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Remove password field - handled by Supabase
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
 
-  // Relations
+  // Relations remain the same
   polls Poll[]
   votes Vote[]
 

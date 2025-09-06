@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { requireAuth } from '@/lib/auth'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { optionId, userId } = await request.json()
+    // Require authentication
+    const user = await requireAuth()
+    
+    const { optionId } = await request.json()
     const pollId = params.id
 
     // Validate input
-    if (!optionId || !userId) {
+    if (!optionId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -44,7 +48,7 @@ export async function POST(
       where: {
         pollId_userId: {
           pollId,
-          userId
+          userId: user.id
         }
       }
     })
@@ -62,7 +66,7 @@ export async function POST(
         data: {
           pollId,
           optionId,
-          userId
+          userId: user.id
         }
       }),
       prisma.pollOption.update({
@@ -80,6 +84,13 @@ export async function POST(
       { status: 201 }
     )
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
     console.error('Error recording vote:', error)
     return NextResponse.json(
       { error: 'Failed to record vote' },

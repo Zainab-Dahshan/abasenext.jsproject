@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/db'
-import { AuthRequest, AuthResponse } from '@/lib/types'
+import { createServerClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password }: AuthRequest = await request.json()
+    const { email, password } = await request.json()
 
-    // Validate input
     if (!email || !password) {
       return NextResponse.json(
         { message: 'Email and password are required' },
@@ -15,42 +12,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email }
+    const supabase = createServerClient()
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     })
 
-    if (!user) {
+    if (error) {
       return NextResponse.json(
-        { message: 'Invalid credentials' },
+        { message: error.message },
         { status: 401 }
       )
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password)
-    if (!isValidPassword) {
-      return NextResponse.json(
-        { message: 'Invalid credentials' },
-        { status: 401 }
-      )
-    }
-
-    // TODO: Generate JWT token
-    const token = 'mock-jwt-token'
-
-    const response: AuthResponse = {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
-      token
-    }
-
-    return NextResponse.json(response)
+    return NextResponse.json({
+      message: 'Login successful',
+      user: data.user
+    })
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(

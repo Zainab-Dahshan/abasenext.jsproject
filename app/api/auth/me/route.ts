@@ -1,24 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase'
 import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Implement JWT token verification
-    // For now, return mock user data
-    const mockUser = {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const supabase = createServerClient()
+    
+    const {
+      data: { user: supabaseUser },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !supabaseUser) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    return NextResponse.json(mockUser)
+    // Get user from Prisma database
+    const user = await prisma.user.findUnique({
+      where: { id: supabaseUser.id },
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(user)
   } catch (error) {
-    console.error('Auth check error:', error)
+    console.error('Error fetching user:', error)
     return NextResponse.json(
-      { message: 'Authentication failed' },
-      { status: 401 }
+      { error: 'Internal server error' },
+      { status: 500 }
     )
   }
 }
